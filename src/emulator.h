@@ -18,8 +18,8 @@ typedef struct {
 
 void emulator(const unsigned char *program, long programSize, struct Window *win);
 
-uint32_t emulateCPU(State* state);
+uint32_t emulateCPU(Window* win);
 
-int disassemble(State* state);
+int disassemble();
 
 #endif //CHIP8_EMULATOR_H

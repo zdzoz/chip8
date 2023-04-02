@@ -2,6 +2,10 @@
 
 #include "emulator.h"
 
+extern State state;
+
+static SDL_Rect pixelrect;
+
 int SetupWindow(Window* win, const char *title) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("Failed to initialize the SDL2: %s\n", SDL_GetError());
@@ -23,7 +27,7 @@ int SetupWindow(Window* win, const char *title) {
     if (win->renderer == NULL) {
         printf("Failed to create renderer: %s", SDL_GetError());
         exit(-1);
-    };
+    }
 
 
     win->font = TTF_OpenFont("fonts/Cozette/CozetteVector.ttf", 18);
@@ -32,6 +36,8 @@ int SetupWindow(Window* win, const char *title) {
         exit(-1);
     }
 
+    pixelrect.w = PIXEL_W;
+    pixelrect.h = PIXEL_H;
     return TRUE;
 }
 
@@ -44,13 +50,24 @@ void CleanWindow(Window* win) {
     SDL_Quit();
 }
 
+void DrawPixel(Window* win, const uint8_t x, const uint8_t y) {
+    SDL_SetRenderDrawColor(win->renderer, PIXEL_ON);
+    pixelrect.x = x * PIXEL_W;
+    pixelrect.y = y * PIXEL_H;
+//    (63, 31)
+    SDL_RenderFillRect(win->renderer, &pixelrect);
+}
+
 void ClearScreen(Window* win) {
     SDL_RenderPresent(win->renderer);
-    SDL_SetRenderDrawColor(win->renderer, CLEAR_COLOR);
+    SDL_SetRenderDrawColor(win->renderer, PIXEL_OFF);
     SDL_RenderClear(win->renderer);
 }
 
-void RenderText_(Window* win, const char* text, int x, int y, int bot, int right, int debug) {
+
+// DEBUG FUNCTIONS
+#ifndef NDEBUG
+void RenderText(Window* win, const char* text, int x, int y, int bot, int right, int debug) {
     SDL_Surface* surface = TTF_RenderText_Solid(win->font, text, (SDL_Color) { 0xff, 0xff, 0xff, 0xff });
     // convert surface to texture
     SDL_Texture* texture = SDL_CreateTextureFromSurface(win->renderer, surface);
@@ -74,9 +91,6 @@ void RenderText_(Window* win, const char* text, int x, int y, int bot, int right
     SDL_DestroyTexture(texture);
 }
 
-
-
-#ifndef NDEBUG
 const char* ftostr(float f) {
     char* buf = alloca(sizeof(char) * 0xff);
     sprintf(buf, "%.4f", f);
@@ -95,26 +109,24 @@ const char* vI(char d) {
     return buf;
 }
 
-void DebugWindow(Window* win, void* state) {
-    int padx = 40, pady = 20;
-    State* st = state;
+void DebugWindow(Window* win) {
+    int padx = 40, pady = 60;
     SDL_SetRenderDrawColor(win->renderer, DEBUG_CLEAR_COLOR);
     SDL_RenderFillRect(win->renderer, &debugRect);
-    pady += 40;
-    RenderTextDB(win, "PC:", padx, pady);
-    RenderTextDB(win, hextostr(st->pc), padx + 40, pady);
-    RenderTextDBRight(win, "I:", -padx - 70, pady);
-    RenderTextDBRight(win, hextostr(st->pc), -padx, pady);
+    DebugText(win, "PC:", padx, pady);
+    DebugText(win, hextostr(state.pc), padx + 40, pady);
+    DebugTextR(win, "I:", -padx - 70, pady);
+    DebugTextR(win, hextostr(state.pc), -padx, pady);
     pady += 40;
     for (int i = 0; i < 16; i+=2) {
-        RenderTextDB(win, vI(i), padx, pady);
-        RenderTextDB(win, hextostr(st->v[i]), padx + 40, pady);
-        RenderTextDBRight(win, vI(i + 1), -padx - 70, pady);
-        RenderTextDBRight(win, hextostr(st->v[i + 1]), -padx, pady);
+        DebugText(win, vI(i), padx, pady);
+        DebugText(win, hextostr(state.v[i]), padx + 40, pady);
+        DebugTextR(win, vI(i + 1), -padx - 70, pady);
+        DebugTextR(win, hextostr(state.v[i + 1]), -padx, pady);
         pady += 24;
     }
 
-    RenderTextDBBotRight(win, "Delta Time:", -padx - 70, -20);
-    RenderTextDBBotRight(win, ftostr(DELTA_TIME), -padx, -20);
+    DebugTextBR(win, "Delta Time:", -padx - 70, -20);
+    DebugTextBR(win, ftostr(DELTA_TIME), -padx, -20);
 }
 #endif
