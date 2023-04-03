@@ -7,12 +7,15 @@
 
 #include "window.h"
 
+typedef uint8_t byte;
+
 const double DELTA_TIME;
+const uint32_t FPS;
 
 typedef struct {
     uint32_t pc;
-    uint16_t I;     // I register
-    uint8_t v[16]; //  V registers
+    uint16_t I;     // I registers
+    byte v[16]; //  V registers
     const unsigned char* memory;
 } State;
 

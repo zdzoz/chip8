@@ -4,61 +4,59 @@
 #include "emulator.h"
 #include <unistd.h>
 
-#define bool char
+#define bool uint8_t
 #define TRUE 1
 #define FALSE 0
+#define ON 1
+#define OFF 0
 
 #define UNIMPLEMENTED {disassemble(); printf("\tINSTRUCTION UNIMPLEMENTED - %s:%d\n", __FILE_NAME__, __LINE__); exit(-1);}
 
 State state;
 
-typedef uint8_t byte;
+static byte display[EMULATOR_WIDTH_PX * EMULATOR_WIDTH_PX];
 
-typedef struct vec2 {
-    byte x, y;
-} vec2;
-
-static byte* display[2048 >> 3];
-
-static struct Stack {
-    vec2 pixels[2048];
-    union {
-        int size;
-        int top;
-    };
-} stack;
-
-static inline void push(int x, int y) {
-    stack.pixels[stack.top++] = (vec2){x, y};
+static inline bool push(int x, int y) {
+    byte* px = &display[x + y * EMULATOR_WIDTH_PX];
+    if (*px == ON) {
+        *px = OFF;
+        return TRUE;
+    }
+    *px = ON;
 }
-
-static inline void pop() { stack.top--; }
 
 void emulator(const unsigned char* program, long programSize, Window* win) {
     SDL_Event e;
-    stack.top = 0;
 
     state.pc = 0;
     state.memory = program;
 
+
     uint64_t NOW = 0, LAST;
     double* deltaTime = (double*)&DELTA_TIME;
+    uint32_t* fps = (uint32_t*)&FPS;
+
     bool isEmulatorRunning = TRUE;
     while ((state.pc < programSize) && isEmulatorRunning) {
         LAST = NOW;
         NOW = SDL_GetPerformanceCounter();
-
-        *deltaTime = (double)((NOW - LAST)*1000 / (double)SDL_GetPerformanceFrequency() );
+        *deltaTime = (double)((NOW - LAST) / (double)SDL_GetPerformanceFrequency() * 1000);
+        SDL_Delay(floor(1000/60.0 - DELTA_TIME));
+        *fps = 1000 / *deltaTime;
 
 //        state.pc += disassemble();
         state.pc += emulateCPU(win);
 
-        for (int i = 0; i < stack.size; i++) {
-            vec2* s = &stack.pixels[i];
-            DrawPixel(win, s->x, s->y);
+        for (int i = 0; i < 2048; i++) {
+            byte pixel = display[i];
+            if (pixel == ON) {
+                DrawPixel(win, i % EMULATOR_WIDTH_PX, i / EMULATOR_WIDTH_PX);
+            }
         }
 
         DEBUG_WINDOW(win);
+
+        DrawScreen(win);
         ClearScreen(win);
         // Poll window events
         while (SDL_PollEvent(&e)){
@@ -76,7 +74,7 @@ uint32_t emulateCPU(Window* win) {
 
     switch ((opcode & 0xf000) >> 12) {
         case 0x0:
-            if (opcode == 0x00e0) stack.top = 0;
+            if (opcode == 0x00e0) printf("CLS\n"); // TODO: CLEAR SCREEN (CLS)
             if (opcode == 0x00ee) UNIMPLEMENTED; // TODO: RETURN (RET)
             break;
         case 0x1: state.pc = (opcode & 0x0fff) - 0x200; opbyte = 0; break; // 1nnn - JP addr
@@ -99,26 +97,20 @@ uint32_t emulateCPU(Window* win) {
             byte y = state.v[opcode >> 4 & 0xf];
             byte n = opcode & 0xf;
             const byte* sprite = &state.memory[state.I];
+            bool collision = FALSE;
             for (byte i = 0; i < n; i++) {
-                const byte b = state.memory[state.I + i];
-                byte temp = x;
-                if((b & 0x80) == 128) push(temp, y);
-                temp++;
-                if((b & 0x40) == 64)  push(temp, y);
-                temp++;
-                if((b & 0x20) == 32)  push(temp, y);
-                temp++;
-                if((b & 0x10) == 16)  push(temp, y);
-                temp++;
-                if((b & 0x08) == 8)   push(temp, y);
-                temp++;
-                if((b & 0x04) == 4)   push(temp, y);
-                temp++;
-                if((b & 0x02) == 2)   push(temp, y);
-                temp++;
-                if((b & 0x01) == 1)   push(temp, y);
-                y += 1;
+                if((*sprite & 0x80) == 0x80) collision = push((x + 0) % EMULATOR_WIDTH_PX, y % EMULATOR_HEIGHT_PX);
+                if((*sprite & 0x40) == 0x40) collision = push((x + 1) % EMULATOR_WIDTH_PX, y % EMULATOR_HEIGHT_PX);
+                if((*sprite & 0x20) == 0x20) collision = push((x + 2) % EMULATOR_WIDTH_PX, y % EMULATOR_HEIGHT_PX);
+                if((*sprite & 0x10) == 0x10) collision = push((x + 3) % EMULATOR_WIDTH_PX, y % EMULATOR_HEIGHT_PX);
+                if((*sprite & 0x08) == 0x08) collision = push((x + 4) % EMULATOR_WIDTH_PX, y % EMULATOR_HEIGHT_PX);
+                if((*sprite & 0x04) == 0x04) collision = push((x + 5) % EMULATOR_WIDTH_PX, y % EMULATOR_HEIGHT_PX);
+                if((*sprite & 0x02) == 0x02) collision = push((x + 6) % EMULATOR_WIDTH_PX, y % EMULATOR_HEIGHT_PX);
+                if((*sprite & 0x01) == 0x01) collision = push((x + 7) % EMULATOR_WIDTH_PX, y % EMULATOR_HEIGHT_PX);
+                sprite++;
+                y++;
             }
+            state.v[0xf] = collision;
         }
         break;
         case 0xe: UNIMPLEMENTED;

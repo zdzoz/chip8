@@ -13,8 +13,10 @@
 
 #define EMULATOR_WIDTH 960
 #define EMULATOR_HEIGHT 480
-#define PIXEL_W (EMULATOR_WIDTH/64)
-#define PIXEL_H (EMULATOR_HEIGHT/32)
+#define EMULATOR_WIDTH_PX 64
+#define EMULATOR_HEIGHT_PX 32
+#define PIXEL_W (EMULATOR_WIDTH/EMULATOR_WIDTH_PX)
+#define PIXEL_H (EMULATOR_HEIGHT/EMULATOR_HEIGHT_PX)
 
 #ifdef NDEBUG
     #define DEBUG_WINDOW(win)
@@ -47,6 +49,7 @@ int SetupWindow(Window* window, const char *title);
 void CleanWindow(Window* window);
 
 void DrawPixel(Window* win, uint8_t x, uint8_t y);
+void DrawScreen(Window* win);
 
 void ClearScreen(Window* window);
 

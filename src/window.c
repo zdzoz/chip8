@@ -29,7 +29,6 @@ int SetupWindow(Window* win, const char *title) {
         exit(-1);
     }
 
-
     win->font = TTF_OpenFont("fonts/Cozette/CozetteVector.ttf", 18);
     if (win->font == NULL) {
         printf("Failed to read font: %s\n", TTF_GetError());
@@ -54,12 +53,14 @@ void DrawPixel(Window* win, const uint8_t x, const uint8_t y) {
     SDL_SetRenderDrawColor(win->renderer, PIXEL_ON);
     pixelrect.x = x * PIXEL_W;
     pixelrect.y = y * PIXEL_H;
-//    (63, 31)
     SDL_RenderFillRect(win->renderer, &pixelrect);
 }
 
-void ClearScreen(Window* win) {
+void DrawScreen(Window* win) {
     SDL_RenderPresent(win->renderer);
+}
+
+void ClearScreen(Window* win) {
     SDL_SetRenderDrawColor(win->renderer, PIXEL_OFF);
     SDL_RenderClear(win->renderer);
 }
@@ -97,6 +98,12 @@ const char* ftostr(float f) {
     return buf;
 }
 
+const char* itostr(int d) {
+    char* buf = alloca(sizeof(char) * 0xff);
+    sprintf(buf, "%d", d);
+    return buf;
+}
+
 const char* hextostr(int d) {
     char* buf = alloca(sizeof(char) * 0xff);
     sprintf(buf, "0x%02x", d);
@@ -125,8 +132,9 @@ void DebugWindow(Window* win) {
         DebugTextR(win, hextostr(state.v[i + 1]), -padx, pady);
         pady += 24;
     }
-
-    DebugTextBR(win, "Delta Time:", -padx - 70, -20);
+    DebugTextB(win, "FPS:", padx, -40);
+    DebugTextBR(win, itostr(FPS), -padx, -40);
+    DebugTextB(win, "Delta Time:", padx, -20);
     DebugTextBR(win, ftostr(DELTA_TIME), -padx, -20);
 }
 #endif
