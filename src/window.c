@@ -1,5 +1,5 @@
-#include "window.h"
 
+#include "window.h"
 #include "emulator.h"
 
 extern State state;
