@@ -13,5 +13,5 @@ brew install sdl2
 ```
 
 ```bash
-brew install sd2_ttf
+brew install sdl2_ttf
 ```
